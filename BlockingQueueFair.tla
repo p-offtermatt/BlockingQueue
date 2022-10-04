@@ -118,7 +118,7 @@ Fairness ==
 
 Liveness == Fairness => BQSFairSpec
 
-Starvationt == Fairness => BQSStarvation
+Starvations == Fairness => BQSStarvation
 -----------------------------------------------------------------------------
 
 =============================================================================
