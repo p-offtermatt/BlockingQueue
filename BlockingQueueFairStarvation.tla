@@ -1,4 +1,4 @@
--------------------------- MODULE 06_OutTemporalPass --------------------------
+-------------------------- MODULE BlockingQueueFairStarvation --------------------------
 
 EXTENDS Integers, Sequences, FiniteSets, TLC, Apalache
 
