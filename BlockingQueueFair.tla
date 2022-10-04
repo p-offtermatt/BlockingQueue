@@ -116,7 +116,9 @@ Fairness ==
     /\ WF_vars(Put("a", "a"))
     /\ WF_vars(Put("b", "b"))
 
-Liveness == Fairness => BQSStarvation
+Liveness == Fairness => BQSFairSpec
+
+Starvationt == Fairness => BQSStarvation
 -----------------------------------------------------------------------------
 
 =============================================================================
