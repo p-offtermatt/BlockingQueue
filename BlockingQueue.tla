@@ -108,8 +108,8 @@ FairSpec ==
     \* Assert that producers take steps should their  Put  action be (continuously) 
     \* enabled. This is the basic case of fairness that rules out stuttering, i.e.,
     \* assert global progress.
-    /\ \A t \in Producers:
-            WF_vars(Put(t,t)) 
+    /\ WF_vars(Put("a", "a"))
+    /\ WF_vars(Put("b", "b"))
     \* Stipulates that  Get  actions (consumers!) will eventually notify *all*
     \* waiting producers. In other words, given repeated  Get  actions (we don't
     \* care which consumer, thus, existential quantification), all waiting
@@ -119,21 +119,24 @@ FairSpec ==
     \* inefficient "policy".
     \* This fairness constraint was initially proposed by Leslie Lamport, although
     \* with the minor typo "in" instead of "notin", which happens to hold for
-    \* configurations with at most two producers.
-    /\ \A t \in Producers:
-            SF_vars(\E self \in Consumers: Get(self) /\ t \notin waitSet')
+    \* configurations with at most two producers
+    /\ SF_vars(\E self \in Consumers: Get(self) /\ "a" \notin waitSet')
+    /\ SF_vars(\E self \in Consumers: Get(self) /\ "b" \notin waitSet')
 
     \* See notes above (except swap "producer" with "consumer").
-    /\ \A t \in Consumers:
-            WF_vars(Get(t)) 
-    /\ \A t \in Consumers:
-            SF_vars(\E self \in Producers: Put(self, self) /\ t \notin waitSet')
+    /\ WF_vars(Get("d"))
+    /\ WF_vars(Get("e"))
+    /\ SF_vars(\E self \in Consumers: Get(self) /\ "d" \notin waitSet')
+    /\ SF_vars(\E self \in Consumers: Get(self) /\ "e" \notin waitSet')
+
 
 (* All producers will continuously be serviced. For this to be violated,    *)
 (* ASSUME Cardinality(Producers) > 1 has to hold (a single producer cannot  *)
 (* starve itself).                                                          *)
 Starvation ==
-    /\ \A p \in Producers: []<>(<<Put(p, p)>>_vars)
-    /\ \A c \in Consumers: []<>(<<Get(c)>>_vars)
+    /\ []<>(<<Put("a", "a")>>_vars)
+    /\ []<>(<<Put("b", "b")>>_vars)
+    /\ []<>(<<Get("d")>>_vars)
+    /\ []<>(<<Get("e")>>_vars)
 
 =============================================================================

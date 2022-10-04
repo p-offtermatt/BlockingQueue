@@ -1,5 +1,5 @@
 ------------------------- MODULE BlockingQueueFair -------------------------
-EXTENDS Naturals, Sequences, FiniteSets, Functions, SequencesExt
+EXTENDS Naturals, Sequences, FiniteSets, Functions, SequencesExt, Apalache
 
 CONSTANTS 
     \* @type: Set(Str);
@@ -8,6 +8,11 @@ CONSTANTS
     Consumers,   (* the (nonempty) set of consumers                       *)
     \* @type: Int;
     BufCapacity  (* the maximum number of messages in the bounded buffer  *)
+
+ConstInit ==
+    /\ Producers = {"a", "b"}
+    /\ Consumers = {"d", "e"}
+    /\ BufCapacity = 3
 
 ASSUME Assumption ==
        /\ Producers # {}                      (* at least one producer *)
@@ -29,9 +34,12 @@ VARIABLES
 \* @type: <<Seq(Str), Seq(Str), Seq(Str)>>;
 vars == <<buffer, waitSeqC, waitSeqP>>
 
-SeqToFunction(seq) ==  [ x \in 1..Len(seq) |-> seq[x]] 
+BoundedMembership(seq, elem) ==
+    \/ Len(seq) >= 1 /\ elem = seq[1]
+    \/ Len(seq) >= 2 /\ elem = seq[2]
+    \/ Len(seq) >= 3 /\ elem = seq[3]
 
-WaitingThreads == Range(SeqToFunction(waitSeqC)) \cup Range(SeqToFunction(waitSeqP))
+WaitingThreads == {c \in Consumers: BoundedMembership(waitSeqC, c)} \cup {p \in Producers: BoundedMembership(waitSeqP, p)}
 
 RunningThreads == (Producers \cup Consumers) \ WaitingThreads
 
@@ -49,7 +57,7 @@ Wait(ws, t) ==
 -----------------------------------------------------------------------------
 
 Put(t, d) ==
-/\ t \notin Range(SeqToFunction(waitSeqP))
+/\ ~BoundedMembership(waitSeqP, t)
 /\ \/ /\ Len(buffer) < BufCapacity
       /\ buffer' = Append(buffer, d)
       /\ NotifyOther(waitSeqC)
@@ -59,7 +67,7 @@ Put(t, d) ==
       /\ UNCHANGED waitSeqC
       
 Get(t) ==
-/\ t \notin Range(SeqToFunction(waitSeqC))
+/\ ~BoundedMembership(waitSeqC, t)
 /\ \/ /\ buffer # <<>>
       /\ buffer' = Tail(buffer)
       /\ NotifyOther(waitSeqP)
@@ -84,10 +92,14 @@ Spec == Init /\ [][Next]_vars
 FairSpec == Spec /\ \A c \in Consumers : WF_vars(Get(c)) 
                  /\ \A p \in Producers : WF_vars(Put(p, p)) 
 
+
+Invariant == \A c \in Consumers : ENABLED Get(c)
+
+
 ----------------
 
-BQS == INSTANCE BlockingQueueSplit WITH waitSetC <- Range(SeqToFunction(waitSeqC)), 
-                                        waitSetP <- Range(SeqToFunction(waitSeqP))
+BQS == INSTANCE BlockingQueueSplit WITH waitSetC <- {c \in Consumers: BoundedMembership(waitSeqC, c)}, 
+                                        waitSetP <- {p \in Producers: BoundedMembership(waitSeqP, p)}
 
 BQSSpec == BQS!Spec
 SpecImpliesBQSSpec == Spec => BQSSpec
@@ -97,14 +109,14 @@ FairSpecImpliesBQSFairSpec == FairSpec => BQSFairSpec
 
 BQSStarvation == BQS!A!Starvation
 FairSpecImpliesBQSStarvation == FairSpec => BQSStarvation
------------------------------------------------------------------------------
 
-TypeInv == /\ Len(buffer) \in 0..BufCapacity
-           \* Producers
-           /\ waitSeqP \in Seq(Producers)
-           /\ IsInjective(SeqToFunction(waitSeqP)) \* no duplicates (thread is either asleep or not)!
-           \* Consumers
-           /\ waitSeqC \in Seq(Consumers)
-           /\ IsInjective(SeqToFunction(waitSeqC)) \* no duplicates (thread is either asleep or not)!
+Fairness == 
+    /\ WF_vars(Get("d"))
+    /\ WF_vars(Get("e"))
+    /\ WF_vars(Put("a", "a"))
+    /\ WF_vars(Put("b", "b"))
+
+Liveness == Fairness => BQSStarvation
+-----------------------------------------------------------------------------
 
 =============================================================================
